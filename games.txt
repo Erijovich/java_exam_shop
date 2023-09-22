@@ -1,0 +1,13 @@
+
+----NEW GAME----   
+(Sat Sep 23 02:54:26 MSK 2023)
+
+   -New Roll (попытка 1/2)-
+"Долото", id: 4, 8% chance to win, 3 peaces left
+
+   -New Roll (попытка 2/2)-
+"Стамеска", id: 3, 16% chance to win, 7 peaces left
+"Долото", id: 4, 8% chance to win, 2 peaces left
+"Отвёртка", id: 2, 26% chance to win, 11 peaces left
+
+   -Game over. Final score = 20%
