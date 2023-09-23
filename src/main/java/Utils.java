@@ -3,10 +3,6 @@ import java.io.IOException;
 
 public class Utils {
 
-    public static void controller() {
-
-    }
-
     /**
      * В принципе - это и будет тот файл , куда весь выигрыш записываем.
      * @param str строка, которую надо записать в файл лога

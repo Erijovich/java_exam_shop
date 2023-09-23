@@ -1,29 +1,26 @@
 import java.io.*;
 import java.util.*;
 
-
 public class SlotMachine {
+    // список объектов, которые учавствуют в игре
     private static ArrayList<Toy> toys;
+    // список очереди на выдачу после каждого реролла
     private static LinkedList<Integer> winnersId;
+    // количество призов пока ещё доступных для получения
     private static int prizes;
-    private static int attempts;
-    private static int totalWeight;
+    // вспомогательный массив, каждому индексу которого соответсвует id объекта Toy, а значению - шанс на выигрыш этого объекта
     private static float[] chancesToWin;
-    private static final Scanner scanner = new Scanner(System.in);
-    private static Random rnd = new Random();
-
-
-    private static int scoreTotalCount = 0;
+    // вспомогательный массив, каждому индексу которого соответсвует id объекта Toy, а значению - количество выигранных
     private static int[] scoreEachCount;
 
-    private static void createGame() {
+    private static final Scanner scanner = new Scanner(System.in);
 
-
-    }
-
-
+    /**
+     * считываем в буфер и построчно отправляем на парсинг
+     * @param fileName имя файла с расширением, например tools.csv
+     * @return тру, если всё успешно распарсилось, фолс - если где-то косяк. в консоли выведет вероятную ошибку
+     */
     private static boolean readCsv(String fileName) {
-
         try (BufferedReader br = new BufferedReader(
                 new FileReader(
                         (new File(fileName)).getAbsolutePath()))) {
@@ -46,6 +43,12 @@ public class SlotMachine {
         }
     }
 
+    /**
+     * парсер одной csv строки (правда я сделал разделение по точке-с-запятой, а не по просто запятой.
+     * парсер не универсальный, а только для этой конкретно задачи, поэтому прямо в нём добавляем игрушку, если всё получилось
+     * @param line строка на парсинг
+     * @return тру - если успех, фолс, если строка слишком длинная, или числовые аргументы не корректны
+     */
     private static boolean parseCsvLine(String line) {
         String[] splitted = line.split(";");
         if (splitted.length > 3) return false;
@@ -58,168 +61,126 @@ public class SlotMachine {
         return true;
     }
 
-
     public static void playGame() {
-        // создаюм игру , создаём все параметры , тут же можно интерфейс для работы (добавить, прочемть, удалить и т.д.
-
-//        try (BufferedReader br = new BufferedReader(new FileReader(tools.csv"))) {
-//            for (String line; (line = br.readLine()) != null; ) {
-//                System.out.println("next line");
-//                if (!parseCsvLine(line)) {
-//                    System.out.println("Ошибка при попытке распарсить строку " + line);
-//
-//                }
-//            }
-//            System.out.println("файл прочитан");
-//
-//        } catch (FileNotFoundException e) {
-//            System.out.println("Файл не найден");
-//
-//        } catch (IOException e) {
-//            System.out.println("Проблемы с доступом к файлу");
-//
-//        }
-
-
-        Utils.logger("\n----NEW GAME----   \n(" + new Date() + ")\n");
+        createGameNote("\n----NEW GAME----   \n(" + new Date() + ")\n");
 
         toys = new ArrayList<>();
         winnersId = new LinkedList<>();
 
-        //---------
-//        try (FileWriter fw = new FileWriter("games.txt", true)) {
-//            fw.write("\n----NEW GAME----   \n(" + new Date() + ")\n");
-//            fw.flush();
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
+        System.out.print("Играть на стандартных настройках " +
+                "(10 игрушек, на выбор из четырёх, пять попыток) - пустой ввод.\n" +
+                "Или загрузить настройки из файла. Имя файла: ");
 
+        String answer = scanner.nextLine();
 
-        // а тут добавлтять игрушки веса и прочее
-        // имя
-        // количесвто или генерация от 1 до 10
-        // вес или генерация от 1 до 10
-
-        // тут можно ввести кол-во попвток не больше чем общиая длина аррайлиста .. точнее сумма каунтов в каждой игрушке
-
-
-        // System.out.print("Можно полностью настроить содержание игры или воспользоваться стандартными (10 игрушек, на выбор из четырёх, пять попыток).\nИспользовать стандартные настройки? Пустая строка - да, любой ввод - нет: ");
-        System.out.print("Воспользоваться стандартными настройками (10 игрушек, на выбор из четырёх, пять попыток) - пустой ввод.\nИли загрузить из файла (укажите имя в корневом каталоге): ");
-
-        if (scanner.nextLine().equals("")) {
-
-            addToy("Lego", 90, 2);
-            addToy("Robot",20,  3);
-            addToy( "Doll", 30, 5);
-            addToy( "Teddy Bear", 10, 5);
-
+        if (answer.equals("")) { // простое заполнение, почти  как в условии
+            addToy("Lego", 40, 2);
+            addToy("Robot", 20, 3);
+            addToy("Doll", 30, 5);
+            addToy("Teddy Bear", 10, 5);
         } else {
-            System.out.print("Укажите имя файла: ");
-//            readCsv("tools.csv"); {
-//            while (! readCsv("tools.csv")) {
-            while (!readCsv(scanner.nextLine())) {
-                System.out.print("Укажите имя файла: ");
+            if (!readCsv(answer)) { // чёт здесь тоже костылями пахнет. завернул как-то.. но голова уже не хочет думать.
+                System.out.print("Укажите корректное имя файла: ");
+                while (!readCsv(scanner.nextLine())) {
+                    System.out.print("Укажите корректное имя файла: ");
+                }
             }
         }
 
-
-        prizes = 0;
-        attempts = 0;
-
+        // Суммарное колв-во призов в игре. Что-бы посчитать сколько из них позволено достать
         int totalToys = 0;
-        for (Toy toy : toys) {
+        for (Toy toy : toys)
             totalToys += toy.getCount();
-        }
 
-        prizes = totalToys / 10; // 10% от общего кол-ва игрушек
-        attempts = prizes / 2; // и половина попыток от количества призов
+        prizes = totalToys / 10; // доступный выигрыш - 10% от общего кол-ва игрушек
+        int attempts = prizes / 2; // дано попыток, как половина от доступного выигрыша
 
+        // этот массив для подсчёта очков. В нём инфо о том, сколько какой  игрушки было выиграно. Что бы найти затем наибольшее
         scoreEachCount = new int[toys.size()];
-        scoreTotalCount = prizes;
 
-        System.out.printf("Попробуй достать %d игрушек одного вида за %d попыток\n", prizes, attempts);
+        // TOFIX тут, конечно, криво-косо. поле prizes я уменьшаю в другом методе, поэтому тут, придётся извращаться,
+        // что бы в финальный подсчёт очков это значение отправить
+        int totalPrizes = prizes;
+        System.out.printf("Попробуй достать %d игрушек одного вида за %d попыток\n", totalPrizes, attempts);
 
-
+        // собственно , это главный цикл игры
         for (int currentAttempt = 0; currentAttempt < attempts; currentAttempt++) {
             System.out.println("В игре сейчас:");
             printAll();
             String newRoll = String.format("\n   -New Roll (попытка %d/%d)-\n", currentAttempt + 1, attempts);
             createGameNote(newRoll);
+
             reroll();
             getToy();
         }
 
-//        System.out.println("max = " + Arrays.stream(scoreEachCount).max().getAsInt());
-//        System.out.println("total = " + Arrays.stream(scoreEachCount).sum());
-//        System.out.println("gigatotal = " + scoreTotalCount);
-
+        // конец игры, подсчёт очков
         int maxFromEach = Arrays.stream(scoreEachCount).max().getAsInt();
-        int totalCount =  Arrays.stream(scoreEachCount).sum();
-        String gameOver = String.format("\n   -Game over. Final score = %d%%\n", (10 * (maxFromEach * totalCount / scoreTotalCount)));
+        int totalCount = Arrays.stream(scoreEachCount).sum();
+        String gameOver = String.format("\n   -Game over. Final score = %d%%\n",
+                (10 * (maxFromEach * totalCount / totalPrizes)));
         createGameNote(gameOver);
-
     }
 
-    public static void createGameNote(String toLog) {
+    /**
+     * отдельный метод - если понадобится делать перегрузки (например, только имя задаём, остальное рандомом)
+     */
+    private static void addToy(String name, int count, int weight) {
+        toys.add(new Toy(name, count, weight));
+    }
+
+    /**
+     * создаём запись в логе и в консоли
+     * @param toLog строка, которую нужно записать
+     */
+    private static void createGameNote(String toLog) {
         Utils.logger(toLog);
         System.out.println(toLog);
     }
 
+    /**
+     * вывод всего, что ещё пока в розыгрыше
+     */
     private static void printAll() {
         for (Toy toy : toys) {
             System.out.printf("id: %d; name: %s, count: %d, weight: %d\n", toy.getId(), toy.getName(), toy.getCount(), toy.getWeight());
         }
     }
 
+    /**
+     * извлечь приз из очереди, сделать запись в лог и уменьшить количество в экземпляре игрушки
+     */
     private static void getToy() {
-        // вот тут уже из приорити убираем и тут же из самого экземпаляра игрушки
-
         for (Integer id : winnersId) {
-//            System.out.println("смотрим айди: " + id);
             System.out.printf("взять %s или закончить эту очередь? Да - пустой ввод, Нет - любой другой ввод: ", toys.get(id).getName());
-
             if (scanner.nextLine().equalsIgnoreCase("")) {
-
-                //    winnersId.add(String.format("%s, id: %d, %.0f%% chance to win, %d peaces left", toys.get(id).getName(), id, chancesToWin[id] * 100, toys.get(id).getCurrentCount()));
-
-                try (FileWriter fw = new FileWriter("games.txt", true)) {
-                    toys.get(id).decrementCount();
-                    prizes--;
-                    fw.write(String.format("%s, id: %d, %.0f%% chance to win, %d peaces left\n", toys.get(id).getName(), id, chancesToWin[id] * 100, toys.get(id).getCount()));
-                    fw.flush();
-                    System.out.printf("Взял %s, под номером %d, %.0f%% шанс на выпадание, осталось %d штук\n", toys.get(id).getName(), id, chancesToWin[id] * 100, toys.get(id).getCount());
-                    scoreEachCount[id]++;
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-
-//                System.out.printf("взять %s или закончить эту очередь? Y/n", toys.get(id).getName());
-
+                toys.get(id).decrementCount(); // уменьшаем count в данном экземпляре
+                prizes--; // уменьшаем количество призов, которое осталось получить
+                scoreEachCount[id]++; // увеличиваем по каждой взятой игрушки её индивидуальный счётчик
+                createGameNote(String.format(
+                        "Взял %s, под номером %d, %.0f%% шанс на выпадание, осталось %d штук\n",
+                        toys.get(id).getName(), id, chancesToWin[id] * 100, toys.get(id).getCount()));
             } else break;
         }
     }
 
-
     private static void reroll() {
-        // бежим по листу проверяя что каунт не ноль и добавляем вес и делитель веса +1
-
-        // Считаем общий вес для партии
-        totalWeight = 0;
-        // массив нормированных к общему весу шансов для кажддого приза.
-        chancesToWin = new float[toys.size()];
         // список призов в катке очищаем
         winnersId.clear();
 
-
-        // считаем, сколько общий пул шансов, что бы потом для каждой игрушки нормировать.
-        // перезагружаем счётчик остатков в каждом классе игрушек
+        // Считаем общий вес для партии, что бы потом для каждой игрушки нормировать. При этом выбывшие игрушки уже не влияют
+        int totalWeight = 0;
         for (Toy toy : toys) {
-            totalWeight += toy.getWeight();
-            toy.resetCurrentCount();
-            System.out.printf("current count of %s = %d; ", toy.getName(), toy.getCurrentCount());
+            if (toy.getCount() > 0) {
+                totalWeight += toy.getWeight();
+                toy.resetCurrentCount(); // перезагружаем счётчик остатков в каждом классе игрушек
+//              System.out.printf("current count of %s = %d; ", toy.getName(), toy.getCurrentCount());
+            }
         }
         System.out.println();
 
+        // массив нормированных к общему весу шансов для каждого приза.
+        chancesToWin = new float[toys.size()];
         for (Toy toy : toys) {
             // нормируем шансы для каждой игрушки, приводим к доле от единицы
             // и пишем в массив, где индекс шанса - это айдишник игрушки
@@ -228,57 +189,25 @@ public class SlotMachine {
 
         // заполняем очередь победителей, из которой потом , по одному и по порядку будем доставать
         fillWinners();
-
-        System.out.println();
-
-//        System.out.println();
-//
-//        boolean flag = true;
-//        while (flag) {
-//            if (!winners.isEmpty()) {
-//                System.out.println(winners.poll());
-//            } else flag = false;
-//        }
-
-
     }
 
     private static void fillWinners() {
-
         int current_prize = 0;
-        // тут мы гарантируем, что пустые игрушки не повлияют на кол-во попыток
+        // тут мы гарантируем, что пустые игрушки не повлияют на кол-во попыток, поэтому while, а не for - цикл
         while (current_prize < prizes) {
-            //   System.out.println("\n" + (current_prize+1) + "th current_prize:");
             double nextChance = Math.random();
-            //    System.out.println("chance = " + nextChance);
             double currentChanceRange = 0;
             for (int id = 0; id < chancesToWin.length; id++) {
                 currentChanceRange += chancesToWin[id]; // от конкретной игрушки добавили её шансы на выигрыщш
-                //   System.out.println("try " + toys.get(id).getName() + "; current count = " + toys.get(id).getCurrentCount() + "; chance range = " + currentChanceRange);
                 if (toys.get(id).getCurrentCount() > 0) {  // смотрм, есть ли ещё ткая игрушка в наличии, иначе просто пропускаем
                     if (nextChance < currentChanceRange) { // попадает ли рандомное число в победный диапазон
-                        toys.get(id).decrementCurrentCount();
-                        // System.out.printf("Добавляем %s, id: %d, %.0f%% chance to win, %d peaces left\n", toys.get(id).getName(), id, chancesToWin[id] * 100, toys.get(id).getCurrentCount());
-                        // winnersId.add(String.format("%s, id: %d, %.0f%% chance to win, %d peaces left", toys.get(id).getName(), id, chancesToWin[id] * 100, toys.get(id).getCurrentCount()));
-                        winnersId.add(id);
-                        System.out.print(id + " ");
-
-                        current_prize++;
-                        break;
-                    } //else System.out.println("не прошёл по шансу!");
-                } //else System.out.println("не прошёл по счётчику!");
+                        toys.get(id).decrementCurrentCount(); // уменьшаем кол-во для текущей раздачч
+                        winnersId.add(id); // добавляем в очередь победителей
+                        current_prize++; // увеличиваем while счётчик
+                        break; // прерываем текущий for-цикл
+                    }
+                }
             }
         }
-
     }
-
-    private static void addToy(String name, int count, int weight) {
-        toys.add(new Toy(name, count, weight));
-    }
-
-    private static void addToy(String name) {
-        addToy(name, rnd.nextInt(1, 10), rnd.nextInt(1, 10));
-    }
-
-
 }
